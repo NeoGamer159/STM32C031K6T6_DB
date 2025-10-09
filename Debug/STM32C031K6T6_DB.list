@@ -41,13 +41,13 @@ Idx Name          Size      VMA       LMA       File off  Algn
                   CONTENTS, READONLY, DEBUGGING, OCTETS
  18 .debug_line   0000e5e0  00000000  00000000  000309b0  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 19 .debug_str    00075426  00000000  00000000  0003ef90  2**0
+ 19 .debug_str    000753fd  00000000  00000000  0003ef90  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 20 .comment      00000043  00000000  00000000  000b43b6  2**0
+ 20 .comment      00000043  00000000  00000000  000b438d  2**0
                   CONTENTS, READONLY
- 21 .debug_frame  00002698  00000000  00000000  000b43fc  2**2
+ 21 .debug_frame  00002698  00000000  00000000  000b43d0  2**2
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 22 .debug_line_str 0000006b  00000000  00000000  000b6a94  2**0
+ 22 .debug_line_str 00000042  00000000  00000000  000b6a68  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
 
 Disassembly of section .text:
@@ -5921,7 +5921,7 @@ void Error_Handler(void)
   hi2c1.Instance = I2C1;
  8002cf0:	4b31      	ldr	r3, [pc, #196]	@ (8002db8 <main+0xfc>)
  8002cf2:	6023      	str	r3, [r4, #0]
-  hi2c1.Init.Timing = 0x10805D88;
+  hi2c1.Init.Timing = 0x0090194B;
  8002cf4:	4b31      	ldr	r3, [pc, #196]	@ (8002dbc <main+0x100>)
  8002cf6:	6063      	str	r3, [r4, #4]
   hi2c1.Init.OwnAddress1 = 0;
@@ -6026,7 +6026,7 @@ void Error_Handler(void)
  8002db0:	40021000 	.word	0x40021000
  8002db4:	20000200 	.word	0x20000200
  8002db8:	40005400 	.word	0x40005400
- 8002dbc:	10805d88 	.word	0x10805d88
+ 8002dbc:	0090194b 	.word	0x0090194b
  8002dc0:	200001f0 	.word	0x200001f0
  8002dc4:	08006e14 	.word	0x08006e14
  8002dc8:	08006e18 	.word	0x08006e18

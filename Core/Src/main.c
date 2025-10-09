@@ -118,8 +118,6 @@ int main(void)
 	  lcd_put_cur(0, 0);
 	  lcd_send_string(buffer);
 	  HAL_Delay(100);
-	  //adc2 = ADSreadADC_SingleEnded(&i2c, 2);
-	  //adc3 = ADSreadADC_SingleEnded(&i2c, 3);
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
@@ -179,7 +177,7 @@ static void MX_I2C1_Init(void)
 
   /* USER CODE END I2C1_Init 1 */
   hi2c1.Instance = I2C1;
-  hi2c1.Init.Timing = 0x10805D88;
+  hi2c1.Init.Timing = 0x0090194B;
   hi2c1.Init.OwnAddress1 = 0;
   hi2c1.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
   hi2c1.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
