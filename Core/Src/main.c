@@ -29,7 +29,7 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-
+float temperature = 0;
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -97,6 +97,8 @@ int main(void)
   ADS1115(&i2c, &hi2c1, ADS_ADDR_GND);
   ADSsetGain(&i2c, GAIN_EIGHT);
 
+  SHT31_Config(SHT31_ADDRESS_A, &hi2c1);
+
   lcd_init ();
   lcd_put_cur(0, 0);
   lcd_send_string ("PAN");
@@ -111,6 +113,14 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
+	  if(SHT31_GetData(SHT31_Periodic, SHT31_Medium, SHT31_NON_Stretch, SHT31_1) == SHT31_OK)
+	  {
+		  temperature = SHT31_GetTemperature();
+		  char tempStr[16];
+		  snprintf(tempStr, sizeof(tempStr), "Temp: %.2f C", temperature);
+		  lcd_put_cur(1, 0);
+		  lcd_send_string(tempStr);
+	  }
 	  int16_t adc1 = ADSreadADC_SingleEnded(&i2c, 1);
 	  float current = ((float)adc1 * 0.512f) / (32768.0f * 0.1f);
 	  char buffer[7];
