@@ -1,3 +1,4 @@
-../Core/Src/main.c:142:6:SystemClock_Config	64	static,ignoring_inline_asm
-../Core/Src/main.c:75:5:main	104	static,ignoring_inline_asm
-../Core/Src/main.c:338:6:Error_Handler	0	static,ignoring_inline_asm
+../Core/Src/main.c:118:6:Fan_Update	16	static
+../Core/Src/main.c:265:6:SystemClock_Config	64	static,ignoring_inline_asm
+../Core/Src/main.c:165:5:main	104	static,ignoring_inline_asm
+../Core/Src/main.c:461:6:Error_Handler	0	static,ignoring_inline_asm

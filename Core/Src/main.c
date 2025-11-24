@@ -18,7 +18,10 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-
+#include <stdint.h>
+#include <stdbool.h>
+#include <stdlib.h>
+#include <stdio.h>
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "ADS1015_ADS1115.h"
@@ -29,12 +32,24 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-
+float temperature = 0;
+static uint8_t fan_speed = 0;
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+#define PWM_OFF  0
+#define PWM_25   25
+#define PWM_50   50
+#define PWM_75   75
 
+#define T_ON_LOW        30.0f   // OFF -> 25 %
+#define T_ON_MED        32.0f   // 25 % -> 50 %
+#define T_ON_HIGH       35.0f   // 50 % -> 75 %
+
+#define T_OFF_LOW       29.0f   // 25 % -> OFF
+#define T_DOWN_TO_LOW   31.0f   // 50 % -> 25 %
+#define T_DOWN_TO_MED   34.0f   // 75 % -> 50 %
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -66,6 +81,81 @@ static void MX_TIM3_Init(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
+static void print_fixed(int32_t val, uint8_t frac_digits, char *out, size_t out_len)
+{
+    int32_t sign = (val < 0) ? -1 : 1; //Decide if num is negative or positive
+    uint32_t u = (uint32_t)(sign < 0 ? -val : val); //Create negative or positive version of number
+    uint32_t p10 = 1;
+    for (uint8_t i = 0; i < frac_digits; ++i) p10 *= 10;
+
+    uint32_t whole = u / p10;
+    uint32_t frac  = u % p10;
+
+    if (frac_digits == 0) {
+        (void)snprintf(out, out_len, "%s%lu", (sign < 0) ? "-" : "", (unsigned long)whole);
+        return;
+    }
+    char fmt[16];
+    (void)snprintf(fmt, sizeof(fmt), "%%s%%lu.%%0%ulu", (unsigned)frac_digits);
+    (void)snprintf(out, out_len, fmt, (sign < 0) ? "-" : "", (unsigned long)whole, (unsigned long)frac);
+}
+
+static int32_t to_fixed_round(float x, uint8_t frac_digits)
+{
+    // scale = 10^N
+    int32_t scale = 1;
+    for (uint8_t i = 0; i < frac_digits; ++i) scale *= 10;
+
+    // Ruční zaokrouhlení bez <math.h>
+    float scaled = x * (float)scale;
+    if (scaled >= 0.0f) scaled += 0.5f; else scaled -= 0.5f;
+    int32_t v = (int32_t)scaled;
+    return v;
+}
+
+void Fan_Update(void)
+{
+    float temperature = SHT31_GetTemperature();
+
+    switch (fan_speed)
+    {
+        case 0: // OFF
+            if (temperature >= T_ON_LOW) {
+                TIM3->CCR1 = PWM_25;
+                lcd_put_cur(0, 15);
+                lcd_send_string("L");
+                fan_speed = 1;
+            }
+            break;
+
+        case 1: // LOW (25 %)
+            if (temperature >= T_ON_MED) {
+                TIM3->CCR1 = PWM_50;
+                fan_speed = 2;
+            } else if (temperature <= T_OFF_LOW) {
+                TIM3->CCR1 = PWM_OFF;
+                fan_speed = 0;
+            }
+            break;
+
+        case 2: // MED (50 %)
+            if (temperature >= T_ON_HIGH) {
+                TIM3->CCR1 = PWM_75;
+                fan_speed = 3;
+            } else if (temperature <= T_DOWN_TO_LOW) {
+                TIM3->CCR1 = PWM_25;
+                fan_speed = 1;
+            }
+            break;
+
+        case 3: // HIGH (75 %)
+            if (temperature <= T_DOWN_TO_MED) {
+                TIM3->CCR1 = PWM_50;
+                fan_speed = 2;
+            }
+            break;
+    }
+}
 /* USER CODE END 0 */
 
 /**
@@ -100,9 +190,15 @@ int main(void)
   MX_DMA_Init();
   MX_I2C1_Init();
   MX_TIM3_Init();
+
+  HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
   /* USER CODE BEGIN 2 */
   ADS1115(&i2c, &hi2c1, ADS_ADDR_GND);
   ADSsetGain(&i2c, GAIN_EIGHT);
+
+  TIM3->CCR1 = 0;
+
+  SHT31_Config(SHT31_ADDRESS_A, &hi2c1);
 
   lcd_init ();
   lcd_put_cur(0, 0);
@@ -111,18 +207,21 @@ int main(void)
   lcd_send_string("TEMNOT");
   HAL_Delay(500);
   lcd_clear();
-  HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
-  TIM3->CCR1 = 0;
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-    /* USER CODE END WHILE */
-	  TIM3->CCR1 = 25;
-	  HAL_GPIO_TogglePin (GPIOA, GPIO_PIN_5);
-	  HAL_Delay(500);
+	  /*
+	  if(SHT31_GetData(SHT31_Periodic, SHT31_Medium, SHT31_NON_Stretch, SHT31_1) == SHT31_OK)
+	  {
+		  temperature = SHT31_GetTemperature();
+		  char tempStr[16];
+		  snprintf(tempStr, sizeof(tempStr), "Temp: %.2f C", temperature);
+		  lcd_put_cur(1, 0);
+		  lcd_send_string(tempStr);
+	  }
 	  int16_t adc1 = ADSreadADC_SingleEnded(&i2c, 1);
 	  float current = ((float)adc1 * 0.512f) / (32768.0f * 0.1f);
 	  char buffer[7];
@@ -130,7 +229,31 @@ int main(void)
 	  lcd_put_cur(0, 0);
 	  lcd_send_string(buffer);
 	  HAL_Delay(100);
-    /* USER CODE BEGIN 3 */
+	  //adc2 = ADSreadADC_SingleEnded(&i2c, 2);
+	  //adc3 = ADSreadADC_SingleEnded(&i2c, 3);
+	  */
+	  if(SHT31_GetData(SHT31_Periodic, SHT31_Medium, SHT31_NON_Stretch, SHT31_1) == SHT31_OK)
+	  {
+		  temperature = SHT31_GetTemperature();
+		  char tempStr[16];
+		  int32_t t_centi = to_fixed_round(temperature, 2);
+		  print_fixed(t_centi, 2, tempStr, sizeof(tempStr));
+		  lcd_put_cur(1, 0);
+		  lcd_send_string(tempStr);
+	  }
+
+	  Fan_Update();
+
+	  int16_t adc1 = ADSreadADC_SingleEnded(&i2c, 1);
+	  float current = ((float)adc1 * 0.512f) / (32768.0f * 0.1f);
+
+	  char iStr[16];
+	  int32_t i_milli = to_fixed_round(current, 3);   // např. 0.123 A → 123
+
+	  print_fixed(i_milli, 3, iStr, sizeof(iStr));
+	  lcd_put_cur(0, 0);
+	  lcd_send_string(iStr);
+	  HAL_Delay(100);
   }
   /* USER CODE END 3 */
 }
